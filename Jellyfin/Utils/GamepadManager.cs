@@ -28,7 +28,7 @@ namespace Jellyfin.Utils
                 Interval = TimeSpan.FromMilliseconds(10),
             };
             _gamepadPollingTimer.Tick += GamepadPollingTimer_Tick;
-            _gamepadPollingTimer.Start();
+            //_gamepadPollingTimer.Start();
         }
 
         private void Gamepad_Added(object sender, Gamepad e)

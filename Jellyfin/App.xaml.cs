@@ -1,4 +1,5 @@
-﻿using Jellyfin.Utils;
+﻿using Jellyfin.Controls;
+using Jellyfin.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -33,6 +34,7 @@ namespace Jellyfin
         {
             this.InitializeComponent();
             this.Suspending += OnSuspending;
+            this.RequiresPointerMode = ApplicationRequiresPointerMode.WhenRequested;
         }
 
         /// <summary>
@@ -90,7 +92,7 @@ namespace Jellyfin
                     {
                         rootFrame.Navigate(typeof(Views.OnBoarding), e.Arguments);
                     }
-                    
+
                 }
                 // Ensure the current window is active
                 Window.Current.Activate();
