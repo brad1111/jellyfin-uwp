@@ -45,8 +45,8 @@ namespace Jellyfin.Controls
             // Force layout=tv and enabledGamepad on xbox only.
             if (AppUtils.IsXbox)
             {
-                await WView.ExecuteScriptAsync("localStorage.setItem(\"layout\", \"tv\")");
-                await WView.ExecuteScriptAsync("localStorage.setItem(\"enableGamepad\", \"true\")");
+                //await WView.ExecuteScriptAsync("localStorage.setItem(\"layout\", \"tv\")");
+                //await WView.ExecuteScriptAsync("localStorage.setItem(\"enableGamepad\", \"true\")");
             }
         }
         private async void WView_NavigationStarting(WebView2 sender, CoreWebView2NavigationStartingEventArgs args)
