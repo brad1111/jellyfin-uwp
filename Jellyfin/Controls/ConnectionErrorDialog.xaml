@@ -1,0 +1,21 @@
+﻿<ContentDialog
+    x:Class="Jellyfin.Controls.ConnectionErrorDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Jellyfin.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls"
+    mc:Ignorable="d"
+    Title="Unable to connect"
+    PrimaryButtonText="Retry"
+    SecondaryButtonText="Change server">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <TextBlock FontSize="30" FontFamily="Segoe UI Semilight" Padding="10,0">:(</TextBlock>
+        <TextBlock x:Name="txtMessage" Grid.Column="1">An error occured.</TextBlock>
+    </Grid>
+</ContentDialog>

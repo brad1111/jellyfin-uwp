@@ -3,6 +3,7 @@ using Jellyfin.Utils;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
 using System;
+using System.Threading.Tasks;
 using Windows.UI.Core;
 using Windows.UI.Popups;
 using Windows.UI.ViewManagement;
@@ -53,16 +54,22 @@ namespace Jellyfin.Controls
             args.Handled = true;
         }
 
-        private async void JellyfinWebView_NavigationCompleted(WebView2 sender, CoreWebView2NavigationCompletedEventArgs args)
+        private async Task JellyfinWebView_NavigationCompletedTask(WebView2 sender, CoreWebView2NavigationCompletedEventArgs args)
         {
             if (!args.IsSuccess)
             {
                 CoreWebView2WebErrorStatus errorStatus = args.WebErrorStatus;
                 MessageDialog md = new MessageDialog($"Navigation failed: {errorStatus}");
                 await md.ShowAsync();
+                return;
             }
 
             await WView.ExecuteScriptAsync("navigator.gamepadInputEmulation = 'mouse';");
+        }
+
+        private async void JellyfinWebView_NavigationCompleted(WebView2 sender, CoreWebView2NavigationCompletedEventArgs args)
+        {
+            await JellyfinWebView_NavigationCompletedTask(sender, args);
         }
 
         private void JellyfinWebView_ContainsFullScreenElementChanged(CoreWebView2 sender, object args)
