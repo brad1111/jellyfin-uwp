@@ -1,11 +1,20 @@
 ﻿using Jellyfin.Core;
+using Jellyfin.Models;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Windows.ApplicationModel.Core;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 using Windows.UI.Xaml;
@@ -25,6 +34,9 @@ namespace Jellyfin.Views
     /// </summary>
     public sealed partial class OnBoarding : Page
     {
+        private ObservableCollection<DiscoveredServer> _discoveredServers = new ObservableCollection<DiscoveredServer>();
+        private List<Socket> _sockets = new List<Socket>();
+
         public OnBoarding()
         {
             this.InitializeComponent();
@@ -73,6 +85,7 @@ namespace Jellyfin.Views
         private void OnBoarding_Loaded(object sender, RoutedEventArgs e)
         {
             txtUrl.Focus(FocusState.Programmatic);
+            DiscoverServers();
         }
 
         private async Task<bool> CheckURLValidAsync(string uriString)
@@ -149,6 +162,109 @@ namespace Jellyfin.Views
         {
             txtError.Visibility = Visibility.Visible;
             txtError.Text = $"Error: {statusCode}";
+        }
+
+        private async Task DiscoverServers()
+        {
+            var socket_full = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            _sockets.Add(socket_full);
+
+            HandleDiscoverMessage(socket_full, IPAddress.Broadcast);
+//            HandleDiscoverMessage(socket, IPAddress.Parse("192.168.1.255"));
+
+            foreach (var networkInterface in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                if (networkInterface.OperationalStatus == OperationalStatus.Up)
+                {
+                    var ipProps = networkInterface.GetIPProperties();
+                    foreach (var address in ipProps.UnicastAddresses)
+                    {
+                        if (address.Address.AddressFamily == AddressFamily.InterNetwork)
+                        {
+                            var v4Mask = address.IPv4Mask.GetAddressBytes();
+                            var v4InverseMask = new int[4];
+                            for (int i = 0; i < 4; i++)
+                            {
+                                v4InverseMask[i] = 255 - v4Mask[i];
+                            }
+
+                            var v4Address = address.Address.GetAddressBytes();
+                            var v4BroadcastBytes = new byte[4];
+                            for (int i = 0; i < 4; i++)
+                            {
+                                v4BroadcastBytes[i] = (byte)(v4InverseMask[i] | v4Address[i]);
+                            }
+                            var v4Broadcast = new IPAddress(v4BroadcastBytes);
+
+                            var socket_segment = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                            _sockets.Add(socket_segment);
+                            HandleDiscoverMessage(socket_segment, v4Broadcast);
+                            Debug.WriteLine(v4Broadcast);
+                        }
+                    }
+                }
+            }
+
+
+        }
+
+        private void HandleDiscoverMessage(Socket udpSocket, IPAddress broadcastAddress)
+        {
+            var thread = new Thread(async () =>
+            {
+                udpSocket.EnableBroadcast = true;
+                var sendbuf = Encoding.ASCII.GetBytes("Who is JellyfinServer?");
+                var broadcastEndpoint = new IPEndPoint(broadcastAddress, 7359);
+                udpSocket.ReceiveTimeout = 30000;
+                while (true)
+                {
+                    udpSocket.SendTo(sendbuf, broadcastEndpoint);
+                    Debug.WriteLine($"Sent to {broadcastAddress}");
+
+                    var recieveBuffer = new byte[256];
+                    try
+                    {
+                        while (true)
+                        {
+                            udpSocket.Receive(recieveBuffer);
+                            var receivedText = Encoding.ASCII.GetString(recieveBuffer, 0, recieveBuffer.Length);
+                            Debug.WriteLine($"Received: {receivedText}");
+                            var discoveredServer = JsonConvert.DeserializeObject<DiscoveredServer>(receivedText);
+
+                            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
+                            {
+                                if (!_discoveredServers.Contains(discoveredServer))
+                                {
+                                    _discoveredServers.Add(discoveredServer);
+                                }
+                            });
+                        }
+                    }
+                    catch (SocketException ex)
+                    {
+                        if (ex.SocketErrorCode != SocketError.TimedOut)
+                        {
+                            Debug.WriteLine($"Broadcast Address: {broadcastAddress}, errored with message: {ex.Message}");
+                            throw ex;
+                        }
+                    }
+                }
+            });
+            thread.IsBackground = true;
+            thread.Start();
+        }
+
+        private void DiscoveredList_ItemClick(object sender, ItemClickEventArgs e)
+        {
+            Debug.WriteLine("Selected");
+        }
+
+        private void Page_Unloaded(object sender, RoutedEventArgs e)
+        {
+            foreach (var socket in _sockets)
+            {
+                socket.Dispose();
+            }
         }
     }
 }

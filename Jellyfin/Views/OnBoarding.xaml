@@ -4,8 +4,11 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:Jellyfin.Views"
     xmlns:c="using:Jellyfin.Controls"
+    xmlns:models="using:Jellyfin.Models"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
+    Unloaded="Page_Unloaded"
     mc:Ignorable="d">
 
     <Grid Background="{StaticResource Color0}">
@@ -30,8 +33,12 @@
             <RowDefinition x:Name="RowHeader" Height="200" />
             <RowDefinition />
         </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
 
-        <Grid Background="{StaticResource Color10}">
+        <Grid Background="{StaticResource Color10}" Grid.ColumnSpan="2">
             <Image 
                 x:Name="logo" 
                 Source="/Assets/OnBoardingLogo.png" 
@@ -74,6 +81,43 @@
                     Content="Connect"  />
             </StackPanel>
         </Grid>
-        
+
+        <Grid Grid.Row="1" Grid.Column="1">
+            <StackPanel 
+    x:Name="pnlDiscoveryTitle" 
+    HorizontalAlignment="Center" 
+    VerticalAlignment="Top" 
+    Width="640">
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+>
+                    <TextBlock
+        x:Name="txtDiscoverTitle"
+        Text="Discover Server" 
+        Foreground="White" FontSize="{StaticResource FontL}"
+        Margin="0 0 0 28" FontFamily="{StaticResource JellyfinFamilyFont}"
+                        Padding="0 40 0 0"
+        HorizontalAlignment="Center" />
+                </StackPanel>
+
+
+                <ListView x:Name="DiscoveredList" IsItemClickEnabled="True" ItemClick="DiscoveredList_ItemClick" ItemsSource="{x:Bind _discoveredServers}">
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="models:DiscoveredServer">
+                            <StackPanel>
+                                <TextBlock Text="{x:Bind Name}" FontSize="{StaticResource FontM}"/>
+                                <TextBlock Text="{x:Bind Address}" FontSize="{StaticResource FontS}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                    <ListView.Footer>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <TextBlock FontSize="{StaticResource FontL}" VerticalAlignment="Center">Searching</TextBlock>
+                            <muxc:ProgressRing IsActive="True"/>
+                        </StackPanel>
+                    </ListView.Footer>
+                </ListView>
+            </StackPanel>
+        </Grid>
     </Grid>
 </Page>
