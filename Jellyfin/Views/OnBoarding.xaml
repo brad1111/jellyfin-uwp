@@ -71,25 +71,37 @@
                     Text="{Binding UriString, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
                     KeyUp="TxtUrl_KeyUp"/>
                 <TextBlock 
-                    x:Name="txtError"
-                    FontFamily="{StaticResource JellyfinFamilyFont}"
-                    Text="We're unable to connect to the selected server right now. Please ensure it is running and try again" 
-                    HorizontalAlignment="Center"
-                    TextAlignment="Center"
-                    TextWrapping="Wrap"
-                    Visibility="{Binding ConnectError}"
-                    FontSize="{StaticResource FontM}"
-                    Margin="1 1 1 20"
-                    Foreground="#CF4A4A" />
+        x:Name="txtError"
+        FontFamily="{StaticResource JellyfinFamilyFont}"
+        Text="We're unable to connect to the selected server right now. Please ensure it is running and try again." 
+        HorizontalAlignment="Center"
+        TextAlignment="Center"
+        TextWrapping="Wrap"
+        Visibility="{Binding ConnectError}"
+        FontSize="{StaticResource FontM}"
+        Margin="1 1 1 1"
+        Foreground="#CF4A4A" />
+                <TextBlock 
+        x:Name="txtErrorDetail"
+        FontFamily="{StaticResource JellyfinFamilyFont}"
+        Text="{Binding ErrorMessage}" 
+        HorizontalAlignment="Center"
+        TextAlignment="Center"
+        TextWrapping="Wrap"
+        Visibility="{Binding ErrorMessage}"
+        FontSize="{StaticResource FontS}"
+        Margin="1 1 1 20"
+        Foreground="#CF4A4A" />
                 <Button 
                     x:Name="btnConnect"
                     Style="{StaticResource PrimaryButton}"
                     Content="Connect"
-                    IsEnabled="{Binding ControlsEnabled}"
+                    IsEnabled="{Binding AcceptConnections}"
                     Click="BtnConnect_Click"/>
             </StackPanel>
         </Grid>
 
+        <muxc:ProgressRing IsIndeterminate="{Binding Connecting}" Grid.RowSpan="2" Grid.ColumnSpan="2" Height="100" Width="100"/>
         <Grid Grid.Row="1" Grid.Column="1">
             <StackPanel 
     x:Name="pnlDiscoveryTitle" 
@@ -109,7 +121,10 @@
                 </StackPanel>
 
 
-                <ListView x:Name="DiscoveredList" IsItemClickEnabled="True" ItemClick="DiscoveredList_ItemClick" ItemsSource="{Binding DiscoveredServers}">
+                <ListView x:Name="DiscoveredList" IsItemClickEnabled="True" 
+                          ItemClick="DiscoveredList_ItemClick" 
+                          ItemsSource="{Binding DiscoveredServers}"
+                          IsEnabled="{Binding AcceptConnections}">
                     <ListView.ItemTemplate>
                         <DataTemplate x:DataType="models:DiscoveredServer">
                             <StackPanel>
@@ -118,12 +133,7 @@
                             </StackPanel>
                         </DataTemplate>
                     </ListView.ItemTemplate>
-                    <ListView.Footer>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <TextBlock FontSize="{StaticResource FontL}" VerticalAlignment="Center">Searching</TextBlock>
-                            <muxc:ProgressRing IsActive="True"/>
-                        </StackPanel>
-                    </ListView.Footer>
+                    
                 </ListView>
             </StackPanel>
         </Grid>

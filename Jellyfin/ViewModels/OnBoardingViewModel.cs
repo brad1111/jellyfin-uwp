@@ -34,14 +34,31 @@ namespace Jellyfin.ViewModels
                 PropertyChanged(this, new PropertyChangedEventArgs(nameof(OnBoardingStatus)));
                 PropertyChanged(this, new PropertyChangedEventArgs(nameof(AcceptConnections)));
                 PropertyChanged(this, new PropertyChangedEventArgs(nameof(ConnectError)));
+                PropertyChanged(this, new PropertyChangedEventArgs(nameof(Connecting)));
             }
         } 
         public bool AcceptConnections => _onBoardingStatus != OnBoardingStatus.Connecting && _onBoardingStatus != OnBoardingStatus.Connected;
         public bool ConnectError => _onBoardingStatus == OnBoardingStatus.Error;
+        public bool Connecting => _onBoardingStatus == OnBoardingStatus.Connecting;
         public ObservableCollection<DiscoveredServer> DiscoveredServers { get; } = new ObservableCollection<DiscoveredServer>();
-        private List<Socket> _sockets = new List<Socket>();
 
-        public string ErrorMessage { get; private set; } = string.Empty;
+        private string _errorMessage = null;
+        public string ErrorMessage
+        {
+            get => _errorMessage;
+            private set
+            {
+                if (value == string.Empty)
+                {
+                    _errorMessage = null;
+                } 
+                else
+                {
+                    _errorMessage = value;
+                }
+                PropertyChanged(this, new PropertyChangedEventArgs(nameof(ErrorMessage)));
+            }
+        }
 
         private string _uriString = string.Empty;
         public string UriString
@@ -54,128 +71,7 @@ namespace Jellyfin.ViewModels
             }
         }
 
-        public async Task Connect()
-        {
-            OnBoardingStatus = OnBoardingStatus.Connecting;
-
-            try
-            {
-                var ub = new UriBuilder(UriString);
-                UriString = ub.ToString();
-            }
-            catch
-            {
-                //If the UriBuilder fails the following functions will handle the error
-            }
-
-            if (!await CheckURLValidAsync(UriString))
-            {
-                OnBoardingStatus = OnBoardingStatus.Error;
-            }
-            else
-            {
-                OnBoardingStatus = OnBoardingStatus.Connected;
-                Central.Settings.JellyfinServer = UriString;
-                (Window.Current.Content as Frame).Navigate(typeof(MainPage));
-            }
-
-        }
-
-        public async Task Connect(DiscoveredServer discoveredServer)
-        {
-            UriString = discoveredServer.Address.ToString();
-            await Connect();
-        }
-
-        public void DiscoverServers()
-        {
-            var socket_full = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            _sockets.Add(socket_full);
-
-            HandleDiscoverMessage(socket_full, IPAddress.Broadcast);
-            //            HandleDiscoverMessage(socket, IPAddress.Parse("192.168.1.255"));
-
-            foreach (var networkInterface in NetworkInterface.GetAllNetworkInterfaces())
-            {
-                if (networkInterface.OperationalStatus == OperationalStatus.Up)
-                {
-                    var ipProps = networkInterface.GetIPProperties();
-                    foreach (var address in ipProps.UnicastAddresses)
-                    {
-                        if (address.Address.AddressFamily == AddressFamily.InterNetwork)
-                        {
-                            var v4Mask = address.IPv4Mask.GetAddressBytes();
-                            var v4InverseMask = new int[4];
-                            for (int i = 0; i < 4; i++)
-                            {
-                                v4InverseMask[i] = 255 - v4Mask[i];
-                            }
-
-                            var v4Address = address.Address.GetAddressBytes();
-                            var v4BroadcastBytes = new byte[4];
-                            for (int i = 0; i < 4; i++)
-                            {
-                                v4BroadcastBytes[i] = (byte)(v4InverseMask[i] | v4Address[i]);
-                            }
-                            var v4Broadcast = new IPAddress(v4BroadcastBytes);
-
-                            var socket_segment = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-                            _sockets.Add(socket_segment);
-                            HandleDiscoverMessage(socket_segment, v4Broadcast);
-                            Debug.WriteLine(v4Broadcast);
-                        }
-                    }
-                }
-            }
-
-
-        }
-
-        private void HandleDiscoverMessage(Socket udpSocket, IPAddress broadcastAddress)
-        {
-            var thread = new Thread(async () =>
-            {
-                udpSocket.EnableBroadcast = true;
-                var sendbuf = Encoding.ASCII.GetBytes("Who is JellyfinServer?");
-                var broadcastEndpoint = new IPEndPoint(broadcastAddress, 7359);
-                udpSocket.ReceiveTimeout = 30000;
-                while (true)
-                {
-                    udpSocket.SendTo(sendbuf, broadcastEndpoint);
-                    Debug.WriteLine($"Sent to {broadcastAddress}");
-
-                    var recieveBuffer = new byte[256];
-                    try
-                    {
-                        while (true)
-                        {
-                            udpSocket.Receive(recieveBuffer);
-                            var receivedText = Encoding.ASCII.GetString(recieveBuffer, 0, recieveBuffer.Length);
-                            Debug.WriteLine($"Received: {receivedText}");
-                            var discoveredServer = JsonConvert.DeserializeObject<DiscoveredServer>(receivedText);
-
-                            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
-                            {
-                                if (!DiscoveredServers.Contains(discoveredServer))
-                                {
-                                    DiscoveredServers.Add(discoveredServer);
-                                }
-                            });
-                        }
-                    }
-                    catch (SocketException ex)
-                    {
-                        if (ex.SocketErrorCode != SocketError.TimedOut)
-                        {
-                            Debug.WriteLine($"Broadcast Address: {broadcastAddress}, errored with message: {ex.Message}");
-                            throw ex;
-                        }
-                    }
-                }
-            });
-            thread.IsBackground = true;
-            thread.Start();
-        }
+        private Socket _socket = null;
 
         private async Task<bool> CheckURLValidAsync(string uriString)
         {
@@ -246,11 +142,121 @@ namespace Jellyfin.ViewModels
             return true;
         }
 
+        public async Task Connect()
+        {
+            OnBoardingStatus = OnBoardingStatus.Connecting;
+            ErrorMessage = null;
+            try
+            {
+                var ub = new UriBuilder(UriString);
+                UriString = ub.ToString();
+            }
+            catch(FormatException)
+            {
+                //If the UriBuilder fails the following functions will handle the error
+            }
+
+            if (!await CheckURLValidAsync(UriString))
+            {
+                OnBoardingStatus = OnBoardingStatus.Error;
+            }
+            else
+            {
+                OnBoardingStatus = OnBoardingStatus.Connected;
+                Central.Settings.JellyfinServer = UriString;
+                (Window.Current.Content as Frame).Navigate(typeof(MainPage));
+            }
+
+        }
+
+        public async Task Connect(DiscoveredServer discoveredServer)
+        {
+            UriString = discoveredServer.Address.ToString();
+            await Connect();
+        }
+
+        public void DiscoverServers()
+        {
+            HandleDiscoverMessage(IPAddress.Broadcast);
+        }
+
+        private void HandleDiscoverMessage(IPAddress broadcastAddress)
+        {
+            if (_socket != null)
+            {
+                return;
+            }
+
+            var thread = new Thread(async () =>
+            {
+                var udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp)
+                {
+                    EnableBroadcast = true,
+                    ReceiveTimeout = 5000,
+                };
+
+                _socket = udpSocket;
+                
+                var sendbuf = Encoding.ASCII.GetBytes("Who is JellyfinServer?");
+                var broadcastEndpoint = new IPEndPoint(broadcastAddress, 7359);
+                try
+                {
+                    while (true)
+                    {
+               
+                        udpSocket.SendTo(sendbuf, broadcastEndpoint);
+                        Debug.WriteLine($"Sent to {broadcastAddress}");
+
+                        var recieveBuffer = new byte[256];
+                        try
+                        {
+                            while (true)
+                            {
+                                udpSocket.Receive(recieveBuffer);
+                                var receivedText = Encoding.ASCII.GetString(recieveBuffer, 0, recieveBuffer.Length);
+                                Debug.WriteLine($"Received: {receivedText}");
+                                var discoveredServer = JsonConvert.DeserializeObject<DiscoveredServer>(receivedText);
+
+                                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
+                                {
+                                    if (!DiscoveredServers.Contains(discoveredServer))
+                                    {
+                                        DiscoveredServers.Add(discoveredServer);
+                                    }
+                                });
+                            }
+                        }
+                        catch (SocketException ex)
+                        {
+                            if (ex.SocketErrorCode != SocketError.TimedOut)
+                            {
+                                throw ex;
+                            }
+                        }
+
+                    }
+                }
+                catch (SocketException ex) 
+                {
+                    Debug.WriteLine($"Broadcast Address: {broadcastAddress}, errored with message: {ex.Message}");
+                }
+                finally
+                {
+                    udpSocket.Close();
+                    _socket = null;
+                }
+            });
+
+            thread.IsBackground = true;
+            thread.Start();
+        }
+
         public void Dispose()
         {
-            foreach (var socket in _sockets)
+            if (_socket != null)
             {
-                socket.Dispose();
+                _socket.Shutdown(SocketShutdown.Both);
+                _socket.Close();
             }
         }
     }

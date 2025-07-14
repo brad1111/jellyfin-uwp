@@ -64,9 +64,9 @@ namespace Jellyfin.Views
 
         private async void DiscoveredList_ItemClick(object sender, ItemClickEventArgs e)
         {
-            if (e.ClickedItem is DiscoveredServer)
+            if (e.ClickedItem is DiscoveredServer discoveredServer)
             {
-                await _viewModel.Connect((DiscoveredServer) e.ClickedItem);
+                await _viewModel.Connect(discoveredServer);
             }
 
         }
