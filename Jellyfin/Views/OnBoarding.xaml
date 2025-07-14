@@ -4,12 +4,17 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:Jellyfin.Views"
     xmlns:c="using:Jellyfin.Controls"
+    xmlns:vm="using:Jellyfin.ViewModels"
     xmlns:models="using:Jellyfin.Models"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
     Unloaded="Page_Unloaded"
     mc:Ignorable="d">
+
+    <Page.DataContext>
+        <vm:OnBoardingViewModel/>
+    </Page.DataContext>
 
     <Grid Background="{StaticResource Color0}">
         <VisualStateManager.VisualStateGroups>
@@ -39,8 +44,7 @@
         </Grid.ColumnDefinitions>
 
         <Grid Background="{StaticResource Color10}" Grid.ColumnSpan="2">
-            <Image 
-                x:Name="logo" 
+            <Image
                 Source="/Assets/OnBoardingLogo.png" 
                 Stretch="Uniform" 
                 HorizontalAlignment="Center" 
@@ -60,10 +64,12 @@
                     Margin="0 0 0 28" FontFamily="{StaticResource JellyfinFamilyFont}"
                     HorizontalAlignment="Center" />
                 <TextBox 
-                    x:Name="txtUrl" 
+                    x:Name="txtUrl"
                     Style="{StaticResource PrimaryTextBox}" 
                     Margin="0 8 0 8"
-                    PlaceholderText="ex: 192.168.1.100:8096 or demo.jellyfin.org"/>
+                    PlaceholderText="ex: 192.168.1.100:8096 or demo.jellyfin.org"
+                    Text="{Binding UriString, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
+                    KeyUp="TxtUrl_KeyUp"/>
                 <TextBlock 
                     x:Name="txtError"
                     FontFamily="{StaticResource JellyfinFamilyFont}"
@@ -71,14 +77,16 @@
                     HorizontalAlignment="Center"
                     TextAlignment="Center"
                     TextWrapping="Wrap"
-                    Visibility="Collapsed"
+                    Visibility="{Binding ConnectError}"
                     FontSize="{StaticResource FontM}"
                     Margin="1 1 1 20"
                     Foreground="#CF4A4A" />
                 <Button 
                     x:Name="btnConnect"
                     Style="{StaticResource PrimaryButton}"
-                    Content="Connect"  />
+                    Content="Connect"
+                    IsEnabled="{Binding ControlsEnabled}"
+                    Click="BtnConnect_Click"/>
             </StackPanel>
         </Grid>
 
@@ -101,7 +109,7 @@
                 </StackPanel>
 
 
-                <ListView x:Name="DiscoveredList" IsItemClickEnabled="True" ItemClick="DiscoveredList_ItemClick" ItemsSource="{x:Bind _discoveredServers}">
+                <ListView x:Name="DiscoveredList" IsItemClickEnabled="True" ItemClick="DiscoveredList_ItemClick" ItemsSource="{Binding DiscoveredServers}">
                     <ListView.ItemTemplate>
                         <DataTemplate x:DataType="models:DiscoveredServer">
                             <StackPanel>
