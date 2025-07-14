@@ -31,6 +31,10 @@ namespace Jellyfin.ViewModels
             private set
             {
                 _onBoardingStatus = value;
+                if(value == OnBoardingStatus.Connecting)
+                {
+                    ErrorMessage = null; //reset error message on reconnect
+                }
                 PropertyChanged(this, new PropertyChangedEventArgs(nameof(OnBoardingStatus)));
                 PropertyChanged(this, new PropertyChangedEventArgs(nameof(AcceptConnections)));
                 PropertyChanged(this, new PropertyChangedEventArgs(nameof(ConnectError)));
@@ -145,7 +149,6 @@ namespace Jellyfin.ViewModels
         public async Task Connect()
         {
             OnBoardingStatus = OnBoardingStatus.Connecting;
-            ErrorMessage = null;
             try
             {
                 var ub = new UriBuilder(UriString);
