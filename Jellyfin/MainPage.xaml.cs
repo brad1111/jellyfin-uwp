@@ -22,9 +22,16 @@ namespace Jellyfin
     /// </summary>
     public sealed partial class MainPage : Page
     {
+
+        public event Action OnWebViewLoaded;
         public MainPage()
         {
             this.InitializeComponent();
+        }
+
+        private void JellyfinWebView_OnLoaded()
+        {
+            OnWebViewLoaded?.Invoke();
         }
     }
 }

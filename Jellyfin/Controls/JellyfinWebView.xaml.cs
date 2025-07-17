@@ -14,10 +14,14 @@ namespace Jellyfin.Controls
     public sealed partial class JellyfinWebView : UserControl, IDisposable
     {
         private readonly GamepadManager _gamepadManager;
+        public event Action OnLoaded;
 
         public JellyfinWebView()
         {
             this.InitializeComponent();
+
+            // Set transparent background 
+            Environment.SetEnvironmentVariable("WEBVIEW2_DEFAULT_BACKGROUND_COLOR", "00FFFFFF");
 
             // Set WebView source
             WView.Source = new Uri(Central.Settings.JellyfinServer);
@@ -63,6 +67,7 @@ namespace Jellyfin.Controls
             }
 
             await WView.ExecuteScriptAsync("navigator.gamepadInputEmulation = 'mouse';");
+            OnLoaded?.Invoke();
         }
 
         private void JellyfinWebView_ContainsFullScreenElementChanged(CoreWebView2 sender, object args)

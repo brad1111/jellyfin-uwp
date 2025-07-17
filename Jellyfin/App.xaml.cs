@@ -84,7 +84,9 @@ namespace Jellyfin
                     // parameter
                     if (Core.Central.Settings.HasJellyfinServer)
                     {
-                        rootFrame.Navigate(typeof(MainPage), e.Arguments);
+                        bool loadState = (e.PreviousExecutionState == ApplicationExecutionState.Terminated);
+                        var extendedSplash = new ExtendedSplashScreen(e.SplashScreen, loadState);
+                        rootFrame.Content = extendedSplash;
                     }
                     else
                     {
