@@ -42,7 +42,7 @@ public class MessageHandler
         }
         else if (eventType == "disableFullscreen")
         {
-            await _fullScreenManager.DisableFullScreen().ConfigureAwait(true);
+            _fullScreenManager.DisableFullScreen();
         }
         else if (eventType == "selectServer")
         {

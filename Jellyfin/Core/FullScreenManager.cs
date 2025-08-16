@@ -7,6 +7,8 @@ using Jellyfin.Utils;
 using Windows.Data.Json;
 using Windows.Graphics.Display.Core;
 using Windows.UI.ViewManagement;
+using Windows.UI.Xaml;
+using Windows.UI.Xaml.Controls;
 
 namespace Jellyfin.Core;
 
@@ -126,9 +128,12 @@ public sealed class FullScreenManager
             .FirstOrDefault();
     }
 
-    private static async Task SetDefaultDisplayModeAsync()
+    private void SetDefaultDisplayModeAsync()
     {
-        await HdmiDisplayInformation.GetForCurrentView()?.SetDefaultDisplayModeAsync();
+        _ = Window.Current.Content.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, async () =>
+        {
+            await HdmiDisplayInformation.GetForCurrentView()?.SetDefaultDisplayModeAsync();
+        });
     }
 
     /// <summary>
@@ -170,12 +175,11 @@ public sealed class FullScreenManager
     /// <summary>
     /// Disables FullScreen.
     /// </summary>
-    /// <returns>A task that completes when the fullscreen has been closed.</returns>
-    public async Task DisableFullScreen()
+    public void DisableFullScreen()
     {
         if (AppUtils.IsXbox)
         {
-            await SetDefaultDisplayModeAsync().ConfigureAwait(true);
+            SetDefaultDisplayModeAsync();
         }
         else
         {
